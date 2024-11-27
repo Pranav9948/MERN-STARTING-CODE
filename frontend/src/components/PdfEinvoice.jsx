@@ -1,12 +1,36 @@
 import React from "react";
-import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
+import {
+  Page,
+  Text,
+  View,
+  Document,
+  StyleSheet,
+  Font,
+} from "@react-pdf/renderer";
 import QR from "./QR";
 
-function PdfEinvoice() {
+function PdfEinvoice({pdfData}) {
   const uuid = "0VG95YXFXBCGSHANREF919DJ10";
   const longId = "T7MNFTKAMMBZEDMAREF919DJ10sBXpFC1732248911";
 
   const validationLink = `https://preprod.myinvois.hasil.gov.my/${uuid}/share/${longId}`;
+
+  Font.register({
+    family: "Roboto",
+    fonts: [
+      {
+        src: "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf", // Regular
+      },
+      {
+        src: "https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc9.ttf", // Bold
+        fontWeight: "bold",
+      },
+      {
+        src: "https://fonts.gstatic.com/s/roboto/v30/KFOkCnqEu92Fr1Mu51xF.ttf", // Italic
+        fontStyle: "italic",
+      },
+    ],
+  });
 
   const styles = StyleSheet.create({
     page: {
@@ -16,13 +40,12 @@ function PdfEinvoice() {
     },
     section: {
       margin: 10,
-      paddingLeft: "40px",
-      paddingRight: "40px",
+      paddingLeft: "20px",
+      paddingRight: "20px",
       flexGrow: 1,
 
       border: "2px solid #000",
     },
-
     issuer: {
       display: "flex",
       flexDirection: "column",
@@ -34,7 +57,8 @@ function PdfEinvoice() {
       display: "flex",
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "flex-start",
+      marginTop: "20px",
     },
 
     supplier: {
@@ -42,17 +66,16 @@ function PdfEinvoice() {
       flexDirection: "column",
       justifyContent: "center",
       alignItems: "start",
-      marginTop: "40px",
+      height: "100%",
     },
 
     invoicedetails: {
       display: "flex",
       flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "end",
-      marginTop: "40px",
-
+      justifyContent: "start",
+      alignItems: "start",
       textAlign: "right",
+      height: "100%",
     },
 
     buyer: {
@@ -66,7 +89,7 @@ function PdfEinvoice() {
     table: {
       display: "table",
       width: "100%",
-      borderCollapse: "collapse",
+
       marginTop: 20,
     },
     tableRow: {
@@ -75,11 +98,11 @@ function PdfEinvoice() {
     tableCell: {
       padding: 8,
       fontSize: 10,
-      border: "1px solid black",
+      border: "0.4px solid rgba(0, 0, 0, 0.5); ",
       textAlign: "center",
     },
     tableHeader: {
-      backgroundColor: "#1E90FF",
+      backgroundColor: "#008080",
       color: "white",
       fontWeight: "bold",
     },
@@ -87,7 +110,7 @@ function PdfEinvoice() {
       backgroundColor: "#fff",
     },
     totalRow: {
-      backgroundColor: "rgba(30, 144, 255, 0.5)", // Blue background with 50% opacity
+      backgroundColor: "rgba(0, 128, 128, 0.5)", // Blue background with 50% opacity
       fontWeight: "bold",
       color: "black",
     },
@@ -97,7 +120,7 @@ function PdfEinvoice() {
       flexDirection: "row",
       justifyContent: "between",
       alignItems: "center",
-      marginTop: "40px",
+      marginTop: "20px",
     },
 
     signatureSection: {
@@ -107,23 +130,91 @@ function PdfEinvoice() {
       alignItems: "center",
       gap: "10px",
     },
+    emphasis: { fontFamily: "Helvetica-Bold", color: "#F22300" },
   });
 
-  const data = [
-    [
-      "008",
-      "Jungle Wildlife Safari",
-      "6600.00",
-      "1000.00",
-      "100.00",
-      "7500.00",
-    ],
-    ["008", "Boat Transportation", "200.00", "0.00", "0.00", "200.00"],
-    ["008", "Land Transportation", "400.00", "0.00", "0.00", "400.00"],
-    ["008", "Ocean View Deluxe Room", "2200.00", "200.00", "0.00", "2400.00"],
-  ];
+  function formatAddress(postalAddress) {
+    const addressLines = postalAddress?.AddressLine?.map(
+      (line) => line.Line
+    ).join(", ");
+    const city = postalAddress?.CityName || "";
+    const postalZone = postalAddress?.PostalZone || "";
+    const countryCode = postalAddress?.Country?.[0]?.IdentificationCode || "";
 
-  const totals = ["Total", "", "9400.00", "1200.00", "0.00", "10500.00"];
+    // Mapping country codes to country names
+    const countryMapping = {
+      MYS: "Malaysia",
+      // Add other country codes as needed
+    };
+    const country = countryMapping[countryCode] || "";
+
+    // Combine all parts into a formatted address string
+    return `${addressLines}, ${city} ${postalZone}, ${country}`;
+  }
+
+
+  function formatISOToReadable(dateTimeString) {
+
+    const date = new Date(dateTimeString);
+  
+  
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const readableDate = date.toLocaleDateString(undefined, options); // 
+  
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    const readableTime = date.toLocaleTimeString(undefined, timeOptions);
+  
+    return `${readableDate} ${readableTime}`;
+  }
+
+
+  const {
+    AccountingSupplierParty,
+    AccountingCustomerParty,
+    LegalMonetaryTotal,
+    TaxTotal,
+    InvoiceLine,
+    Signature,
+    InvoiceTypeCode,
+    ID,DocumentCurrencyCode
+
+  } = pdfData.plainJsonData?.Invoice[0];
+
+  // Extracting the necessary data from invoice object
+
+
+
+  const data = InvoiceLine?.map((item) => [
+    item.Item[0]?.CommodityClassification[0]?.ItemClassificationCode,
+    item?.Item[0]?.Description,
+    item?.Price[0]?.PriceAmount,
+    item?.TaxTotal[0]?.TaxAmount,
+    item?.Discount?.DiscountAmount || 0,
+    (
+      parseFloat(item?.Price[0]?.PriceAmount) +
+      parseFloat(item?.TaxTotal[0]?.TaxAmount) -
+      parseFloat(item?.Discount?.DiscountAmount ||0)
+    ).toFixed(2),
+  ]);
+
+  //  const totals = [
+  //     "Total",
+  //     "",
+  //     invoice.LegalMonetaryTotal.TaxExclusiveAmount ,
+  //     invoice.LegalMonetaryTotal.TaxInclusiveAmount ,
+  //     invoice?.TotalDiscount || 0 ,
+  //     invoice.LegalMonetaryTotal.TaxInclusiveAmount +invoice?.TotalAmountAfterDiscount
+  //   ];
+
+  // Calculate totals dynamically based on the data
+  const totals = [
+    "Total",
+    "",
+    data?.reduce((sum, row) => sum + parseFloat(row[2]), 0).toFixed(2), // Subtotal sum
+    data?.reduce((sum, row) => sum + parseFloat(row[3]), 0).toFixed(2), // Tax sum
+    data?.reduce((sum, row) => sum + parseFloat(row[4]), 0).toFixed(2), // Discount sum
+    data?.reduce((sum, row) => sum + parseFloat(row[5]), 0).toFixed(2), // Total sum
+  ];
 
   const renderRow = (row, isHeader = false, isTotal = false) => (
     <View
@@ -146,95 +237,31 @@ function PdfEinvoice() {
 
   return (
     <Document
-    title="E-Invoice"
-    author="Softlets Group"
-    subject="E-Invoice for Tour Package"
-    keywords=" e-invoice, tour package"
-    language="en"
-    pageMode="useOutlines" // Useful for invoices with sections
-    pageLayout="singlePage" // Ensures a single-page view layout
-    onRender={(blob) => console.log("Document rendered:", blob)}
-  >
-    <Page size="A4" style={styles.page} orientation="landscape">
-      <View style={styles.section}>
-        <div>
-          {/* issuer details */}
+      title="E-Invoice"
+      author="Softlets Group"
+      subject="E-Invoice for Tour Package"
+      keywords=" e-invoice, tour package"
+      language="en"
+      pageMode="useOutlines" // Useful for invoices with sections
+      onRender={(blob) => console.log("Document rendered:", blob)}
+    >
+      <Page size="A4" style={styles.page} orientation="portrait">
+        <View style={styles.section}>
+          <div>
+            {/* issuer details */}
 
-          <div style={styles.issuer}>
-            <Text
-              style={{
-                color: "black",
-                fontSize: "12px",
-                marginBottom: "10px",
-                marginTop: "30px",
-                fontWeight: "bold",
-              }}
-            >
-              NZ SOFTLETS SDN BHD
-            </Text>
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-              }}
-            >
-              SA-09-10, Menara Paragon, Persiaran Bestari, Cyber 11, 63000
-              Cyberjaya, Selangor, Malaysia
-            </Text>
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-                opacity: "70",
-              }}
-            >
-              Tel: +603-8316 8888
-            </Text>
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-                opacity: "70",
-              }}
-            >
-              contact us : info@thesoftlets.com
-            </Text>
-          </div>
-
-          {/* supplier invoice section */}
-
-          <div style={styles.supplierInvoiceDetails}>
-            {/* supplier details */}
-
-            <div style={styles.supplier}>
+            <div style={styles.issuer}>
               <Text
                 style={{
-                  color: "black",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   marginBottom: "10px",
+                  marginTop: "30px",
                   fontWeight: "bold",
-                  opacity: "70",
+                  fontFamily: "Helvetica-Bold",
+                  color: "#F22300",
                 }}
               >
-                Supplier TIN : IG24357571080
-              </Text>
-
-              <Text
-                style={{
-                  color: "black",
-                  fontSize: "10px",
-                  marginBottom: "10px",
-                  fontWeight: "bold",
-                  opacity: "70",
-                }}
-              >
-                Supplier Registration Number : Z5713582
+                NZ SOFTLETS SDN BHD
               </Text>
 
               <Text
@@ -244,110 +271,34 @@ function PdfEinvoice() {
                   marginBottom: "10px",
                   fontWeight: "normal",
                   opacity: "70",
+                  fontFamily: "Roboto",
                 }}
               >
-                Supplier ID Type : PASSPORT
-              </Text>
-
-              <Text
-                style={{
-                  color: "black",
-                  fontSize: "10px",
-                  marginBottom: "10px",
-                  fontWeight: "normal",
-                  opacity: "70",
-                }}
-              >
-                Supplier MSIC code: 79110
-              </Text>
-
-              <Text
-                style={{
-                  color: "black",
-                  fontSize: "10px",
-                  marginBottom: "10px",
-                  fontWeight: "normal",
-                  opacity: "70",
-                }}
-              >
-                Supplier business activity description: Travel agency
-                activities
-              </Text>
-
-              <Text
-                style={{
-                  color: "black",
-                  fontSize: "10px",
-                  marginBottom: "10px",
-                  fontWeight: "normal",
-                  opacity: "70",
-                  width: "55%",
-                }}
-              >
-                Supplier Address : Lot 66,Bangunan Merdeka,Persiaran
-                Jaya,50480,
-                <br /> Kuala Lumpur, Selangor Malaysia
-              </Text>
-
-              <Text
-                style={{
-                  color: "black",
-                  fontSize: "10px",
-                  marginBottom: "10px",
-                  fontWeight: "normal",
-                  opacity: "70",
-                }}
-              >
-                Supplier Contact Number : 6010px34567890
+                Tel: +603-8316 8888
               </Text>
             </div>
 
-            {/* invoice details */}
+            {/* supplier invoice section */}
 
-            <div style={styles.invoicedetails}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  flexDirection: "column",
-                  alignItems: "flex-end",
-                }}
-              >
+            <div style={styles.supplierInvoiceDetails}>
+              {/* supplier details */}
+
+              <div style={styles.supplier}>
                 <Text
                   style={{
                     color: "black",
-                    fontSize: "12px",
+                    fontSize: "10px",
                     marginBottom: "10px",
                     fontWeight: "bold",
                     opacity: "70",
-                    textAlign: "right",
+                    fontFamily: "Roboto",
                   }}
                 >
-                  E-INVOICE
-                </Text>
-
-                <Text
-                  style={{
-                    color: "black",
-                    fontSize: "10px",
-                    marginBottom: "10px",
-                    fontWeight: "normal",
-                    opacity: "70",
-                  }}
-                >
-                  e-Invoice Type : 01-invoice
-                </Text>
-
-                <Text
-                  style={{
-                    color: "black",
-                    fontSize: "10px",
-                    marginBottom: "10px",
-                    fontWeight: "normal",
-                    opacity: "70",
-                  }}
-                >
-                  e-Invoice code : INV10px345
+                  Supplier TIN :
+                  {
+                   " " +  AccountingSupplierParty[0]?.Party[0]?.PartyIdentification[0]
+                      ?.ID
+                  }
                 </Text>
 
                 <Text
@@ -357,9 +308,14 @@ function PdfEinvoice() {
                     marginBottom: "10px",
                     fontWeight: "bold",
                     opacity: "70",
+                    fontFamily: "Roboto",
                   }}
                 >
-                  UUID : 0VG95YXFXBCGSHANREF919DJ10
+                  Passport ID :
+                  { 
+                    " " + AccountingSupplierParty[0]?.Party[0]?.PartyIdentification[1]
+                      ?.ID
+                  }
                 </Text>
 
                 <Text
@@ -369,10 +325,11 @@ function PdfEinvoice() {
                     marginBottom: "10px",
                     fontWeight: "normal",
                     opacity: "70",
+                    fontFamily: "Roboto",
                   }}
                 >
-
-                   Issuance Date 20/11/2024 9:00 PM (MYT)
+                  Supplier Name : 
+                  { " " + AccountingSupplierParty[0]?.Party[0]?.PartyLegalEntity[0].RegistrationName}
                 </Text>
 
                 <Text
@@ -382,171 +339,317 @@ function PdfEinvoice() {
                     marginBottom: "10px",
                     fontWeight: "normal",
                     opacity: "70",
+                    fontFamily: "Roboto",
                   }}
                 >
+                  Supplier MSIC code : 
+                  { " " + AccountingSupplierParty[0]?.Party[0]?.IndustryClassificationCode}
+                </Text>
 
-                  Currency Code: RM
+                <Text
+                  style={{
+                    color: "black",
+                    fontSize: "10px",
+                    marginBottom: "10px",
+                    fontWeight: "normal",
+                    opacity: "70",
+                    fontFamily: "Roboto",
+                  }}
+                >
+                 Business activity description: Travel agency
+                  activities
+                </Text>
+
+                <Text
+                  style={{
+                    color: "black",
+                    fontSize: "10px",
+                    marginBottom: "10px",
+                    fontWeight: "normal",
+                    opacity: "70",
+                    width: "55%",
+                    fontFamily: "Roboto",
+                    lineHeight: "16px",
+                  }}
+                >
+                  Address :
+                  {" " + formatAddress(AccountingSupplierParty[0]?.Party[0]?.PostalAddress[0])}
+                </Text>
+
+                <Text
+                  style={{
+                    color: "black",
+                    fontSize: "10px",
+                    marginBottom: "10px",
+                    fontWeight: "normal",
+                    opacity: "70",
+                    fontFamily: "Roboto",
+                  }}
+                >
+                  Supplier Contact Number :
+                  {" "+ AccountingSupplierParty[0]?.Party[0]?.Contact[0]?.Telephone}
                 </Text>
               </div>
+
+              {/* invoice details */}
+
+              <div style={styles.invoicedetails}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "12px",
+                      marginBottom: "10px",
+                      fontWeight: "bold",
+                      opacity: "70",
+                      textAlign: "right",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    E-INVOICE
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "bold",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    UUID : {pdfData.uuid}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "normal",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    Issuance Date : {formatISOToReadable(pdfData.dateTimeValidated)}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "normal",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    e-Invoice Type : {InvoiceTypeCode}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "normal",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    e-Invoice code : {ID}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "normal",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    Currency Code: {DocumentCurrencyCode}
+                  </Text>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* line-breaker */}
+            {/* line-breaker */}
 
-          <div
-            style={{
-              border: "1px solid black",
-              width: "100%",
-              height: "1px",
-              marginTop: "20px",
-              marginBottom: "20px",
-            }}
-          ></div>
-
-          {/* Buyer */}
-
-          <div style={styles.buyer}>
-            <Text
+            <div
               style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "bold",
-                opacity: "70",
+                border: "1px solid black",
+                width: "100%",
+                height: "1px",
+                marginTop: "20px",
+                marginBottom: "20px",
               }}
-            >
-              Buyer TIN : E100000000010
-            </Text>
+            ></div>
 
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "bold",
-                opacity: "70",
-              }}
-            >
-              Buyer Name : john doe
-            </Text>
+            {/* Buyer */}
 
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-                opacity: "70",
-              }}
-            >
-              Buyer Identification Number : 790456098765
-            </Text>
+            <div style={styles.buyer}>
+              <Text
+                style={{
+                  color: "black",
+                  fontSize: "10px",
+                  marginBottom: "10px",
+                  fontWeight: "bold",
+                  opacity: "70",
+                  fontFamily: "Roboto",
+                }}
+              >
+                Buyer TIN :
+                { " "+ AccountingCustomerParty[0]?.Party[0]?.PartyIdentification[0]?.ID}
+              </Text>
 
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-                opacity: "70",
-              }}
-            >
-              Supplier MSIC code: 79110
-            </Text>
+              <Text
+                style={{
+                  color: "black",
+                  fontSize: "10px",
+                  marginBottom: "10px",
+                  fontWeight: "bold",
+                  opacity: "70",
+                  fontFamily: "Roboto",
+                }}
+              >
+                Buyer Name :
+                {" "+ AccountingCustomerParty[0]?.Party[0]?.PartyLegalEntity[0].RegistrationName }
+              </Text>
 
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-                opacity: "70",
-                width: "70%",
-              }}
-            >
-              Buyer Address : 6 Tingkast 2 Jaya , 40173 selangor Malaysia
-            </Text>
+              <Text
+                style={{
+                  color: "black",
+                  fontSize: "10px",
+                  marginBottom: "10px",
+                  fontWeight: "normal",
+                  opacity: "70",
+                  fontFamily: "Roboto",
+                }}
+              >
+                Buyer Identification Number :
+                { " "+ AccountingCustomerParty[0]?.Party[0]?.PartyIdentification[1]?.ID}
+              </Text>
 
-            <Text
-              style={{
-                color: "black",
-                fontSize: "10px",
-                marginBottom: "10px",
-                fontWeight: "normal",
-                opacity: "70",
-              }}
-            >
-              Buyer Contact Number : 601234567890
-            </Text>
-          </div>
+              <Text
+                style={{
+                  color: "black",
+                  fontSize: "10px",
+                  marginBottom: "10px",
+                  fontWeight: "normal",
+                  opacity: "70",
+                  width: "70%",
+                  fontFamily: "Roboto",
+                }}
+              >
+                Buyer Address :
+                {" " + formatAddress(AccountingCustomerParty[0]?.Party[0]?.PostalAddress[0])}
+              </Text>
 
-          {/* Table */}
+              <Text
+                style={{
+                  color: "black",
+                  fontSize: "10px",
+                  marginBottom: "10px",
+                  fontWeight: "normal",
+                  opacity: "70",
+                  fontFamily: "Roboto",
+                }}
+              >
+                Buyer Contact Number :
+                {" "+AccountingCustomerParty[0]?.Party[0]?.Contact[0]?.Telephone}
+              </Text>
+            </div>
 
-          {/* Table */}
-
-          {/* Second Page */}
-          <div style={{ marginTop: "50px" }}>
             {/* Table */}
-            <View style={styles.table}>
-              {/* Table Header */}
-              {renderRow(
-                [
-                  "Classification Code",
-                  "Description of Service",
-                  "Subtotal",
-                  "Tax Amount",
-                  "Discount Amount",
-                  "Total Amount",
-                ],
-                true
-              )}
 
-              {/* Table Body */}
-              {data.map((row, index) => renderRow(row))}
+            {/* Table */}
 
-              {/* Total Row */}
-              {renderRow(totals, false, true)}
-            </View>
+          
+            <div >
+              {/* Table */}
+              <View style={styles.table}>
+                {/* Table Header */}
+                {renderRow(
+                  [
+                    "Code",
+                    "Description of Service",
+                    "Subtotal",
+                    "Tax Amount",
+                    "Discount Amount",
+                    "Total Amount",
+                  ],
+                  true
+                )}
 
-            <View style={styles.signatureQRcodeSection}>
-              <div style={styles.signatureQRcode}>
-                <Text
-                  style={{
-                    color: "black",
-                    fontSize: "10px",
-                    marginBottom: "10px",
-                    fontWeight: "bold",
-                    opacity: "70",
-                  }}
-                >
-                  Digital Signature : 98654ertftugxu23567897thcb
-                </Text>
+                {/* Table Body */}
+                {data?.map((row, index) => renderRow(row))}
 
-                <Text
-                  style={{
-                    color: "black",
-                    fontSize: "10px",
-                    marginBottom: "10px",
-                    fontWeight: "bold",
-                    opacity: "70",
-                  }}
-                >
-                  Date and Time of validation : 12/06/2024 12:58:13
-                </Text>
-              </div>
+                {/* Total Row */}
+                {renderRow(totals, false, true)}
+              </View>
 
-              <div style={{display: "flex", alignItems: "flex-end",justifyContent: "flex-end",width:'100%',height:'100%'}}>
-              <QR url={validationLink} width={128} foreground="#000" background="#fff" />
-            
+              <View style={styles.signatureQRcodeSection}>
+                <div style={styles.signatureQRcode}>
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "bold",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    Digital Signature : 98654ertftugxu23567897thcb
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "black",
+                      fontSize: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "bold",
+                      opacity: "70",
+                      fontFamily: "Roboto",
+                    }}
+                  >
+                    Date and Time of validation : {formatISOToReadable(pdfData.dateTimeValidated)}
+                  </Text>
                 </div>
 
-
-            </View>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "flex-end",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                >
+                  <QR
+                    url={validationLink}
+                    width={64}
+                    foreground="#000"
+                    background="#fff"
+                  />
+                </div>
+              </View>
+            </div>
           </div>
-        </div>
-      </View>
-    </Page>
-  </Document>
+        </View>
+      </Page>
+    </Document>
   );
 }
 export default PdfEinvoice;

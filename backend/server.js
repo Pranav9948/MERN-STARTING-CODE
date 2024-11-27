@@ -1,19 +1,15 @@
-const express = require('express')
-const app = express()
-const cors=require('cors')
-const port = 7500
+const QRCode = require('qrcode');
+var colors = require('colors');
 
 
-app.use(cors())
+const uuid = '0VG95YXFXBCGSHANREF919DJ10';
+const submissionUid = 'T7MNFTKAMMBZEDMAREF919DJ10sBXpFC1732248911';
 
-app.get('/', (req, res) => {
-  console.log('calling');
-  
-  return res.status(200).json({
-    message:"hello"
-  })
-})
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`) 
-})
+const validationLink = `https://preprod.myinvois.hasil.gov.my/${uuid}/share/${submissionUid}`;
+
+// Generate the QR code
+QRCode.toFile('validation-qr-code.png', validationLink, { errorCorrectionLevel: 'H' }, (err) => {
+  if (err) throw err;
+  console.log('QR code saved as validation-qr-code.png!');
+});
