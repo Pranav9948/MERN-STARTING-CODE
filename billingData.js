@@ -1,4 +1,4 @@
-{ "agentBooking" :{
+const agentBooking={
     "id": 2,
     "uuid": "8690084e-56e9-4364-8047-8fde98ba0394",
     "ref_no": "DTM00002",
@@ -207,9 +207,9 @@
             }
         }
     ]
-},
+}
 
-"packageRooms":[
+const packageRooms=[
     {
         "id": 4,
         "uuid": "700d8bce-71a8-43c7-8fba-5ff0923201ec",
@@ -386,9 +386,10 @@
             }
         ]
     }
-],
+]
 
-"bookingTransportation":[
+
+const bookingTransportation=[
     {
         "id": 3,
         "uuid": "94f256f1-608c-4a38-a6a6-af34c06a5c08",
@@ -455,9 +456,9 @@
         "createdAt": "2024-11-28T13:36:17.968Z",
         "updatedAt": "2024-11-28T13:36:17.968Z"
     }
-],
+]
 
-"bookingTaxes":[
+const bookingTaxes=[
     {
         "id": 17,
         "uuid": "7637c960-0f12-4c07-af4f-e18097166b46",
@@ -479,9 +480,9 @@
             "updatedAt": "2024-11-28T11:14:47.993Z"
         }
     }
-],
+]
 
-"bookingActivities":[
+const activities=[
     {
         "id": 2,
         "uuid": "dce228e4-68a1-4799-9873-3eb70afcf5ed",
@@ -496,7 +497,7 @@
         "child_nonresident_count": null,
         "date": "2024-12-17T00:00:00.000Z",
         "ref_image": "https://s3.ap-east-1.amazonaws.com/summerbayresort-test/product_enquiry_activity/gdm4iScubadiver.webp",
-        "special_notes": "Guided Forest Trek - 🥾\nTreehouse Stay - 🛖\nNature Yoga - 🧘‍♂\nForest Picnic - 🍴\nBirdwatching - 🦜\nNight Safari - 🌙",
+        "special_notes": "Guided Forest Trek - 🥾\nTreehouse Stay - 🛖\nNature Yoga - 🧘‍♂️\nForest Picnic - 🍴\nBirdwatching - 🦜\nNight Safari - 🌙",
         "booking_id": 2,
         "createdAt": "2024-11-28T13:33:47.121Z",
         "updatedAt": "2024-11-28T13:33:47.121Z",
@@ -514,5 +515,3 @@
         }
     }
 ]
-
-}

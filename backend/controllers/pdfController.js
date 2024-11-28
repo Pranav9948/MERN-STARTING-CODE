@@ -60,8 +60,7 @@ exports.getPdfData = async (req, res) => {
   const { authorizationtoken } = req.headers;
   const { UUID } = req.body;
 
-  console.log("authorizationtoken".blue, authorizationtoken);
-  console.log("UUID".green, UUID);
+
 
   try {
     const { data } = await axios.get(
