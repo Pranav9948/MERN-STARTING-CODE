@@ -20,34 +20,38 @@ exports.submitDocuments = async (req, res) => {
     });
   }
 
+  
+
   const {
-    agent_booking,
+    agentBooking,
     packageRooms,
     bookingTransportation,
-    bookingActivities,
+    activities,
+    bookingTaxes
   } = req.body;
 
+
+
+  
   ///convert the Invoice data we are recieving into UBL format
 
   const invoiceStructurredData = generateInvoice(
-    agent_booking,
+    agentBooking,
     packageRooms,
     bookingTransportation,
-    bookingActivities
+    activities,
+    bookingTaxes
   );
 
+ 
   const convertedUBLDocument = convertToUBL(invoiceStructurredData);
 
   ///convert the document into base64 encoded
 
-  console.log(
-    "convertedUBLDocument".america,
-    JSON.stringify(convertedUBLDocument, null, 2)
-  );
+
 
   const convertedDocument = jsonToBase64(convertedUBLDocument);
 
-  console.log("converteddoc".magenta, convertedDocument);
 
   // hash the base64 encoded document
 

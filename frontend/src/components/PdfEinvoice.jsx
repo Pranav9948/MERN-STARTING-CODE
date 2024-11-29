@@ -10,8 +10,11 @@ import {
 import QR from "./QR";
 
 function PdfEinvoice({pdfData}) {
-  const uuid = "0VG95YXFXBCGSHANREF919DJ10";
-  const longId = "T7MNFTKAMMBZEDMAREF919DJ10sBXpFC1732248911";
+
+
+  console.log('pdfData',pdfData)
+  const uuid = pdfData.uuid;
+  const longId = pdfData.longID;
 
   const validationLink = `https://preprod.myinvois.hasil.gov.my/${uuid}/share/${longId}`;
 
@@ -166,6 +169,8 @@ function PdfEinvoice({pdfData}) {
   
     return `${readableDate} ${readableTime}`;
   }
+
+
 
 
   const {

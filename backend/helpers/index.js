@@ -382,7 +382,7 @@ exports.convertToUBL=(InvoiceData) =>{
                   "ItemPriceExtension": [
                       {
                           "Amount": [
-                              { _: line.ItemPriceExtension.Amount.value, currencyID: line.ItemPriceExtension.Amount.currencyID },
+                              { _: Number(line.ItemPriceExtension.Amount.value), currencyID: line.ItemPriceExtension.Amount.currencyID },
                           ],
                       },
                   ],
@@ -411,14 +411,28 @@ exports.convertToUBL=(InvoiceData) =>{
   return ublData;
 }
 
+
+function capitalizeWords(str) {
+    return str
+        .toLowerCase() 
+        .split(' ') 
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1)) 
+        .join(' '); 
+}
+
+
+
 /// this function will convert json data from postman to e invoice structure
 
-exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,bookingActivities)=> {
-    
+exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,activities,bookingTaxes)=> {
+
+
+   
+
     const invoice = {
         Invoice: {
             ID: "INV12345",
-            IssueDate: "2024-11-20",
+            IssueDate: "2024-11-28",
             IssueTime: "15:30:00Z",
             InvoiceTypeCode: {
                 value: "01",
@@ -528,9 +542,11 @@ exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,booking
     // Populate Invoice Lines
     let lineID = 1;
 
+  
+
     // Add booking activities
-    if (bookingActivities) {
-        bookingActivities.forEach(activity => {
+    if (activities) {
+        activities.forEach(activity => {
             invoice.Invoice.InvoiceLines.push({
                 ID: lineID.toString().padStart(3, "0"),
                 Quantity: { value: 1, unitCode: "IE" },
@@ -598,7 +614,7 @@ exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,booking
                     }
                 },
                 Item: {
-                    Description: `${transport.transport_type} transportation from ${transport.from_location} to ${transport.to_location}`,
+                    Description: capitalizeWords(`${transport.transport_type} transportation from ${transport.from_location} to ${transport.from_to}`),
                     CommodityClassification: { Code: "008", listID: "CLASS" },
                     OriginCountry: "MYS"
                 },
@@ -612,8 +628,25 @@ exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,booking
     }
 
     // Add package rooms
-    if (packageRooms) {
-        packageRooms.forEach(room => {
+    if (packageRooms) { 
+
+        const roomCountMap = {}; 
+
+            packageRooms.forEach((room, index) => {
+              
+                const roomTypeName = room.RoomTypes.room_name;
+                if (!roomCountMap[roomTypeName]) {
+                    roomCountMap[roomTypeName] = 1; 
+                } else {
+                    roomCountMap[roomTypeName] += 1; 
+                }
+
+                const uniqueRoomName = roomCountMap[roomTypeName] > 1 
+                ? `${roomTypeName} - ${roomCountMap[roomTypeName]}` // Append count to room name
+                : roomTypeName;
+        
+
+
             invoice.Invoice.InvoiceLines.push({
                 ID: lineID.toString().padStart(3, "0"),
                 Quantity: { value: Number(room.room_count), unitCode: "IE" },
@@ -634,7 +667,7 @@ exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,booking
                     }
                 },
                 Item: {
-                    Description: room.RoomTypes.room_name,
+                    Description: uniqueRoomName,
                     CommodityClassification: { Code: "008", listID: "CLASS" },
                     OriginCountry: "MYS"
                 },
@@ -643,12 +676,106 @@ exports.generateInvoice=(agentBooking,packageRooms,bookingTransportation,booking
                     Amount: { value: room.total_amount, currencyID: "MYR" }
                 }
             });
+
+            
+            lineID++;
+        });
+
+    }
+   
+
+    if (bookingTaxes) {
+        bookingTaxes.forEach((tax) => {
+            const taxTypeCode = (() => {
+                switch (tax.AgentTax.tax_name) {
+                    case "Sales Tax": return "01";
+                    case "Service Tax": return "02";
+                    case "Tourism Tax": return "03";
+                    case "High-Value Goods Tax": return "04";
+                    case "Sales Tax on Low Value Goods": return "05";
+                    default: return "06"; // Default to "Not Applicable"
+                }
+            })();
+    
+            invoice.Invoice.InvoiceLines.push({
+                ID: lineID.toString().padStart(3, "0"),
+                Quantity: {
+                    value: 1,
+                    unitCode: "EA" // Each tax is treated as a separate item
+                },
+                Amount: { value: tax.amount, currencyID: "MYR" },
+                Tax: {
+                    TaxAmount: { value: 0, currencyID: "MYR" },
+                    TaxSubtotal: {
+                        TaxableAmount: { value: 0, currencyID: "MYR" },
+                        TaxAmount: { value: 0, currencyID: "MYR" },
+                        TaxCategory: {
+                            ID: taxTypeCode,
+                            TaxScheme: {
+                                ID: tax.AgentTax.tax_name,
+                                schemeID: "UN/ECE 5153",
+                                schemeAgencyID: "6"
+                            }
+                        }
+                    }
+                },
+                Item: {
+                    Description: `Tax: ${tax.AgentTax.tax_name} (${tax.AgentTax.percentage}%)`,
+                    CommodityClassification: { Code: "TAX", listID: "CLASS" },
+                    OriginCountry: "MYS"
+                },
+                Price: { Amount: { value: tax.amount, currencyID: "MYR" } },
+                ItemPriceExtension: {
+                    Amount: { value: tax.amount, currencyID: "MYR" }
+                }
+            });
             lineID++;
         });
     }
 
+
+    // Check if additional charges exist and are greater than 1
+if (agentBooking && agentBooking.additional_charges > 0) {
+    invoice.Invoice.InvoiceLines.push({
+        ID: lineID.toString().padStart(3, "0"),
+        Quantity: {
+            value: 1, // Assuming it's a one-time charge, adjust if needed
+            unitCode: "EA" 
+        },
+        Amount: { value: agentBooking.additional_charges, currencyID: "MYR" },
+        Tax: {
+            TaxAmount: { value: 0, currencyID: "MYR" },
+            TaxSubtotal: {
+                TaxableAmount: { value: agentBooking.additional_charges, currencyID: "MYR" },
+                TaxAmount: { value: 0, currencyID: "MYR" },
+                TaxCategory: {
+                    ID: "06", 
+                    TaxScheme: {
+                        ID: "OTH",
+                        schemeID: "UN/ECE 5153",
+                        schemeAgencyID: "6"
+                    }
+                }
+            }
+        },
+        Item: {
+            Description: `Additional Charges for booking`,
+            CommodityClassification: { Code: "008", listID: "CLASS" },
+            OriginCountry: "MYS"
+        },
+        Price: { Amount: { value: agentBooking.additional_charges, currencyID: "MYR" } },
+        ItemPriceExtension: {
+            Amount: { value: agentBooking.additional_charges, currencyID: "MYR" } // Ensure Amount is a number
+        }
+    });
+    lineID++;
+}
+
+    
+
     return invoice;
 }
+
 
 
 exports.validateRequest=(tin, idType, idValue)=> {
@@ -665,5 +792,5 @@ exports.validateRequest=(tin, idType, idValue)=> {
         return "Missing ID Value";
     }
 
-    return null; 
+    return null
 }
